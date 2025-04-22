@@ -10,6 +10,8 @@ slurms/*
 *.npy
 *.txt
 *.sh
+*.fa
+*.h5
 
 # editor temp files
 *.swp
