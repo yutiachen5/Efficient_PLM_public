@@ -5,15 +5,18 @@
 
 This project explores efficient pretraining of protein language models (PLMs) by actively identifying and sampling the most informative sequences. Our goal is to improve downstream performance while reducing computational cost.
 
-🚧 *This repository is under active development.*  
-📄 *A preprint describing this work will be published soon!*
+🚧 This repository is under active development.  
+📄 A preprint describing this work will be published soon!
 
 ---
 
 ## Table of Contents
 
-- [Dataset](#uniref20---uniref50)
-- [Pre-trained Model](#pre-trained-model)
+- [Dataset]
+  - Uniref 20 to Uniref 50 
+- [Pre-trained Model]
   - LSTM
   - Transformer
-- [Evaluation](#validation-perplexity)
+- [Evaluation]
+  - Subset of Uniref 50
+
