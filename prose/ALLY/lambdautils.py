@@ -12,14 +12,13 @@ class lambdanet(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 64),
-            # nn.LeakyReLU(),
-            nn.ReLU(),
+            nn.LeakyReLU(),
 
-            # nn.Linear(64, 32),
-            # nn.LeakyReLU(),
+            nn.Linear(64, 32),
+            nn.LeakyReLU(),
 
-            # nn.Linear(32, 16),
-            # nn.LeakyReLU(),
+            nn.Linear(32, 16),
+            nn.LeakyReLU(),
 
             nn.Linear(64, 1),
             nn.Softplus()  

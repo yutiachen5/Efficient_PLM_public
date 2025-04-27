@@ -65,7 +65,7 @@ class ALLYSampling(Strategy):
         X_indices, X_embedding = self.get_embedding(held_emb_data)
 
         print(torch.stack(X_embedding).shape)
-        # np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/held_emb.npy', torch.stack(X_embedding).numpy())
+        np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_held.npy', torch.stack(X_embedding).numpy())
 
         emb_dataset = UnmaskedDataset(X_embedding, X_indices)
         indices, preds = self.predict_lambdas(emb_dataset, scaler)
@@ -106,8 +106,8 @@ class ALLYSampling(Strategy):
                         remaining_slots = self.opts['nQuery'] - len(chosen_indices)
                         chosen_indices += indices_no_space_left[:remaining_slots]
                         chosen_preds += preds_no_space_left[:remaining_slots]
-                # df = pd.DataFrame({'sorted_preds':sorted_preds, 'sorted_idxs':sorted_indices})
-                # df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_pred.csv', index = False)
+                df = pd.DataFrame({'sorted_preds':sorted_preds, 'sorted_idxs':sorted_indices})
+                df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_pred.csv', index = False)
             else:
                 sorted_pairs = sorted(zip(preds, indices), reverse=True)
                 sorted_preds, sorted_indices = zip(*sorted_pairs)  
@@ -153,13 +153,13 @@ class ALLYSampling(Strategy):
 
         print(torch.stack(X_embedding).shape)
 
-        # np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/base_emb.npy', torch.stack(X_embedding).numpy())
+        np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.npy', torch.stack(X_embedding).numpy())
 
         y_lambdas = self.lambdas[trained_indices]
 
         print(len(y_lambdas))
-        # df = pd.DataFrame({'lambdas_trained':y_lambdas})
-        # df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.csv', index = False)
+        df = pd.DataFrame({'lambdas_trained':y_lambdas})
+        df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.csv', index = False)
         
 
         if self.opts['lambdaValSize'] > 0: # default 0.2
