@@ -68,7 +68,7 @@ def main():
     parser.add_argument('--query-mode', type=str, default='active', help='query mode of ally sampling: largest lambda (active), random lambda (random), and least lambda (passive)')
     parser.add_argument('--nQuery', help='number of points to drop and add in each round', type=int, default=10000)
     parser.add_argument('--nStart', help='number of points to start', type=int, default=50000)
-    parser.add_argument('--alr', help='learning rate of lambdanet', type=float, default=1e-4)
+    parser.add_argument('--alr', help='learning rate of lambdanet', type=float, default=1e-3)
     parser.add_argument('--validate-every', help = 'validate every n steps', type = int, default = 10)
     parser.add_argument('--epsilon', help='constant tightness', type=float, default=2.75) 
     parser.add_argument('--lr-dual', help='dual learning rate', type=float, default=0.1)

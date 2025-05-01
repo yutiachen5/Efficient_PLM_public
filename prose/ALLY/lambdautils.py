@@ -11,16 +11,13 @@ class lambdanet(nn.Module):
         super(lambdanet, self).__init__()
 
         self.layers = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 256),
             nn.LeakyReLU(),
 
-            nn.Linear(64, 32),
+            nn.Linear(256, 16),
             nn.LeakyReLU(),
 
-            nn.Linear(32, 16),
-            nn.LeakyReLU(),
-
-            nn.Linear(64, 1),
+            nn.Linear(16, 1),
             nn.Softplus()  
         )
 

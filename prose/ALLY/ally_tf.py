@@ -216,6 +216,8 @@ class ALLYSampling(Strategy):
         print_every = 1
         for epoch in range(100):
             mseCurrent = self._train_lambdanet(epoch, loader_tr, self.optimizer_net, scheduler) 
+            scheduler.step()
+            
             if self.opts['lambdaValSize'] > 0:
                 mseVal = self._val_lambdanet(loader_val)
                 if mseVal < mseBest:
@@ -226,6 +228,7 @@ class ALLYSampling(Strategy):
                     print(f"{epoch} Lambda training mse:  {mseCurrent:.6f} | Lambda validation mse: {mseVal:.6f}", flush=True) # scaled
                 else:
                     print(f"{epoch} Lambda training mse:  {mseCurrent:.6f}", flush=True) # scaled
+            
         if self.opts['lambdaValSize'] > 0: # save best model in terms of minimum val mse
             self.reg = best_reg
 

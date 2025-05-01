@@ -43,6 +43,8 @@ class Strategy:
 
         self.clf = self.model.apply(self.weight_reset).cuda() 
         self.reg = lambdanet(input_dim = self.clf.get_embedding_dim()).cuda() 
+        print(self.reg)
+        
         self.optimizer_clf = optim.Adam(self.clf.parameters(), lr = opts['plr'], weight_decay=opts['weight_decay'])
         self.optimizer_net = optim.Adam(self.reg.parameters(), lr = opts['alr'])
         self.scheduler_clf = optim.lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer_clf, T_0=500, eta_min=opts['plr']/2) 

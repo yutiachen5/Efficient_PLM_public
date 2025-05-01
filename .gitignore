@@ -1,4 +1,4 @@
-
+**/.ipynb_checkpoints/*
 data/*
 saved_models/*
 saved_emb/*
@@ -12,6 +12,7 @@ slurms/*
 *.sh
 *.fa
 *.h5
+*.sav
 
 # editor temp files
 *.swp
