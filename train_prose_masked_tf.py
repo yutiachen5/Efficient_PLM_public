@@ -1,9 +1,10 @@
 #========================================================================
 # Adapted from 
-# ProSE(Bepler T, Berger B. Learning the protein language: Evolution, structure, and function. Cell Syst. 2021 Jun 16;12(6):654-669.e3. doi: 10.1016/j.cels.2021.05.017)
+# ProSE(Bepler T, Berger B. Learning the protein language: Evolution, structure, and function. Cell Syst. 2021)
 # and
 # ALLY (Navid NaderiAlizadeh and Rohit Singh. Aggregating residue-level protein language model embeddings with optimal transport. bioRxiv, 2024)
 # by Eleanor Chen (yc583@duke.edu)
+# Please check our repo: https://github.com/yutiachen5/Efficient_PLM_public for other scripts!
 #========================================================================
 
 from __future__ import print_function,division
