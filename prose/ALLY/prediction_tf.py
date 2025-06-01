@@ -1,8 +1,12 @@
+"""
+ - load pre-trained model
+ - evaluate model performance on downtream tasks
+"""
+
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from prose.utils import pad_seq
-# from torch.nn.utils.rnn import PackedSequence
 from prose.utils import pack_sequences, unpack_sequences, pad_seq_scl
 from torch import nn
 from prose.ALLY.models import LogisticRegressionModel, LinearMapping, DTIPooling, AAVNetwork

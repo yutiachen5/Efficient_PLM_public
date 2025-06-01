@@ -1,3 +1,8 @@
+"""
+ - training and evaluation of embedding model with optimization by sample informativeness
+ - training, evaluation, and prediction of regression head to update samples by informativeness
+"""
+
 import numpy as np
 import pandas as pd
 import time
