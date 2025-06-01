@@ -25,8 +25,6 @@ from prose.utils import pad_seq
 from prose.datasets import FastaDataset, ClozeDataset, UnmaskedDataset
 from sklearn.preprocessing import MinMaxScaler
 
-# torch.autograd.set_detect_anomaly(True)
-
 
 class ALLYSampling(Strategy):
     def __init__(self, clf, use_cuda, base, opts):
@@ -64,7 +62,7 @@ class ALLYSampling(Strategy):
         held_emb_data = UnmaskedDataset(held_data, self.held_indices)
         X_indices, X_embedding = self.get_embedding(held_emb_data)
 
-        print(torch.stack(X_embedding).shape)
+        # save embeddings for regression head architecture exploring 
         np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_held.npy', torch.stack(X_embedding).numpy())
 
         emb_dataset = UnmaskedDataset(X_embedding, X_indices)
@@ -73,7 +71,7 @@ class ALLYSampling(Strategy):
 
 
         if self.opts['query_mode'] == 'active':
-            # Select samples with highest predicted lambda from each cluster
+            # Select samples with highest predicted lambda from each cluster to diversify samples
             if self.opts['cluster'] == "kmeans":
                 # MiniBatch K-means on embeddings
                 print("Clustering ....")
@@ -83,7 +81,6 @@ class ALLYSampling(Strategy):
                 sorted_triplets = sorted(zip(preds, indices, cluster_indices), reverse=True)  # descendingly 
                 sorted_preds, sorted_indices, sorted_cluster_indices = zip(*sorted_triplets)
         
-                # Select highest lambdas from each cluster
                 chosen_indices = []
                 chosen_preds = []
                 indices_no_space_left = []
@@ -114,14 +111,6 @@ class ALLYSampling(Strategy):
                 chosen_preds = list(sorted_preds)[:self.opts['nQuery']] # no diversity
                 chosen_indices = list(sorted_indices)[:self.opts['nQuery']]
 
-            # if self.opts['base'] == 'drop':
-            #     chosen_preds = list(sorted_preds)[:len(drop_indices)]
-            #     chosen_indices = list(sorted_indices)[:len(drop_indices)]
-            # elif self.opts['base'] == 'keep':
-            #     chosen_preds = list(sorted_preds)[:self.opts['nQuery']]
-            #     chosen_indices = list(sorted_indices)[:self.opts['nQuery']]
-            # else: raise ValueError
-
         elif self.opts['query_mode'] == 'random':
             pairs = list(zip(preds, indices))
             chosen_preds, chosen_indices = map(list, zip(*random.sample(pairs, n)))
@@ -145,22 +134,13 @@ class ALLYSampling(Strategy):
         trained_indices = [i for i, f in zip(np.arange(self.n_all)[self.idxs_base], self.flag[self.idxs_base]) if f >= 1]
         filtered_data = Subset(self.all, trained_indices)  # train lambdanet only with sequences that have been seen by the model
 
-        print(len(filtered_data))
-        print(len(trained_indices))
-
         filtered_emb_data = UnmaskedDataset(filtered_data, trained_indices)  
         X_indices, X_embedding = self.get_embedding(filtered_emb_data)
-
-        print(torch.stack(X_embedding).shape)
-
         np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.npy', torch.stack(X_embedding).numpy())
 
         y_lambdas = self.lambdas[trained_indices]
-
-        print(len(y_lambdas))
         df = pd.DataFrame({'lambdas_trained':y_lambdas})
         df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.csv', index = False)
-        
 
         if self.opts['lambdaValSize'] > 0: # default 0.2
             X_train, X_test, y_train, y_test = train_test_split(X_embedding, y_lambdas, test_size=self.opts['lambdaValSize'], random_state = self.opts['seed'])
@@ -186,7 +166,7 @@ class ALLYSampling(Strategy):
             mseFinal += loss.item()
             optimizer.step()
         
-        return mseFinal/len(loader_tr) # batch mse
+        return mseFinal/len(loader_tr) # batch train mse
 
     def _val_lambdanet(self, loader_val):
         self.reg.eval()
@@ -199,7 +179,7 @@ class ALLYSampling(Strategy):
             out = self.reg(x) 
             loss = F.mse_loss(out.squeeze(), y.squeeze())
             mseFinal += loss.item()
-        return mseFinal/len(loader_val)
+        return mseFinal/len(loader_val) # batch val mse
 
     def train_val_lambdanet(self, X_train, X_test, y_train, y_test, scaler):
         best_reg = None

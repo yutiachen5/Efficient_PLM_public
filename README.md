@@ -10,13 +10,13 @@ This project explores efficient pretraining of protein language models (PLMs) by
 
 ---
 
-## Table of Contents
-
-- Dataset
+- Datasets
   - Uniref 20 to Uniref 50 
-- Pre-trained Model
+- Embedding Models
   - LSTM
   - Transformer
-- Evaluation
-  - Subset of Uniref 50
+- Downstram Tasks
+  - Protein Secondary Structure Prediction
+  - Sub-Celluar Localization Prediction
+  - AAV2 Capsid Protein VP-1 Prediction
 
