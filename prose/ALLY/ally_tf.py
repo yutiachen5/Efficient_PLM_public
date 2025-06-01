@@ -185,9 +185,8 @@ class ALLYSampling(Strategy):
             loss.backward() 
             mseFinal += loss.item()
             optimizer.step()
-            # scheduler.step()
         
-        return mseFinal/len(loader_tr)
+        return mseFinal/len(loader_tr) # batch mse
 
     def _val_lambdanet(self, loader_val):
         self.reg.eval()
@@ -217,7 +216,7 @@ class ALLYSampling(Strategy):
         for epoch in range(100):
             mseCurrent = self._train_lambdanet(epoch, loader_tr, self.optimizer_net, scheduler) 
             scheduler.step()
-            
+
             if self.opts['lambdaValSize'] > 0:
                 mseVal = self._val_lambdanet(loader_val)
                 if mseVal < mseBest:

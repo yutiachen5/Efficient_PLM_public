@@ -1,3 +1,11 @@
+#========================================================================
+# Adapted from 
+# ProSE(Bepler T, Berger B. Learning the protein language: Evolution, structure, and function. Cell Syst. 2021 Jun 16;12(6):654-669.e3. doi: 10.1016/j.cels.2021.05.017. PMID: 34139171; PMCID: PMC8238390)
+# and
+# ALLY (Navid NaderiAlizadeh and Rohit Singh. Aggregating residue-level protein language model embeddings with optimal transport. bioRxiv, 2024)
+# by Eleanor Chen (yc583@duke.edu)
+#========================================================================
+
 from __future__ import print_function,division
 
 import numpy as np
@@ -38,7 +46,7 @@ def infinite_loop(it):
             yield x
 
 def main():
-    parser = argparse.ArgumentParser('Script for training multitask embedding model')
+    parser = argparse.ArgumentParser('Script for training the embedding model')
 
     # training dataset
     parser.add_argument('--path-train', default='/hpc/group/naderilab/navid/mmseqs/results/uniref20_rep_seq.fasta', help='path to training dataset in fasta format (default: data/uniprot/uniref90.fasta)')
@@ -70,7 +78,7 @@ def main():
     parser.add_argument('--nStart', help='number of points to start', type=int, default=50000)
     parser.add_argument('--alr', help='learning rate of lambdanet', type=float, default=1e-3)
     parser.add_argument('--validate-every', help = 'validate every n steps', type = int, default = 10)
-    parser.add_argument('--epsilon', help='constant tightness', type=float, default=2.75) 
+    parser.add_argument('--epsilon', help='constant tightness for constrained learning', type=float, default=2.75) 
     parser.add_argument('--lr-dual', help='dual learning rate', type=float, default=0.1)
     parser.add_argument('--lambdaValSize', help = 'Size in percentage of validation set for lambda net', type = float, default = 0.2)
     parser.add_argument('--lambdanet-batch-size', help='lambda net batch size', type=int, default=64)
@@ -88,12 +96,11 @@ def main():
 
     args = parser.parse_args()
 
+    # parameter search
+
     # all_configs = [(plr, s) for plr in [1e-5,5e-5] for s in [100, 200, 300]]
     # args.plr, args.seed = all_configs[taskID]
     # args.name = 'plr_'+str(args.plr)+'_nly_'+str(args.nlayer)+'_d_'+str(args.d_model)+'_s_'+str(args.seed)+'_ffd_'+str(args.dim_feedforward)+'_e_'+str(args.epsilon)
-
-
-    # args.name = 'random_s_'+str(args.seed)
 
     # all_configs = [(l, ffd, s) for l in [5, 6] for ffd in [128, 256] for s in [100, 200, 300]]
     # args.nlayer, args.seed, args.dim_feedforward = all_configs[taskID] 
@@ -106,6 +113,7 @@ def main():
 
     seed_everything(args.seed)
 
+    # track pre-training progress by weights & bias
     wandb.init(
         project="array_jobs2",
         name=args.name, 
@@ -122,6 +130,7 @@ def main():
     base = FastaDataset(args.path_train, max_length=args.max_length, debug=args.debug)
     print('Done with loading base set data:', time.strftime("%H:%M:%S", time.localtime()))
 
+    # set output path
     opts = vars(args)
     if args.output is None:
         opts['output'] = sys.stdout
@@ -134,6 +143,7 @@ def main():
     weight = np.maximum(L/args.max_length, 1)
     sampler = LargeWeightedRandomSampler(weight, args.batch_size * args.num_steps)
 
+    # initialize embedding model
     model = TransformerMLM(input_dim=21, emb_dim=args.d_model, num_heads=args.nhead, num_layers=args.nlayer, 
                             dim_feedforward=args.dim_feedforward, dropout=args.dropout, out_dim=21, max_len=args.max_length)
     total_params = sum(p.numel() for p in model.parameters())
@@ -150,6 +160,7 @@ def main():
     print('# training model', file=sys.stderr)
     print('number of samples in base set: {}'.format(args.nStart), flush=True)
 
+    # initialize ALLY for constrained learning
     alg = ALLYSampling(model, use_cuda, base, opts)
 
     NUM_ROUND = 7  # 6 held-out sets + base set
@@ -162,12 +173,12 @@ def main():
         gc.collect()
 
         if rd < NUM_ROUND - 1:
-            # Query
+            # query current held-out set
             chosen_indices, chosen_preds = alg.query(rd, args.nQuery)
             sampled += list(chosen_indices)
 
         if rd < NUM_ROUND - 2:
-            # Update
+            # update current base set
             alg.update(chosen_indices, chosen_preds, rd)
 
         nsamples = args.nStart + (rd+1)*args.nQuery
