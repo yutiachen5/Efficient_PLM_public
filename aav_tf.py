@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 from prose.datasets import AAVDataset
 from prose.ALLY.prediction_tf import AAVRegressor
 
+# testing
+
 def main():
     parser = argparse.ArgumentParser('Script for downstream task - adeno-associated virus 2 score prediction')
     parser.add_argument('--path-model', default='/hpc/group/naderilab/eleanor/Efficient_PLM/saved_models/save_emb_d_1024/20250402_1556.sav', help='path to pretrained model')

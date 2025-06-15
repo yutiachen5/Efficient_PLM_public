@@ -92,6 +92,7 @@ def main():
     parser.add_argument('--cluster', help='How to cluster for diversity in primaldual', type = str, default='nocluster')
     parser.add_argument('--nClusters', help='the number of clusters', type = int, default=4000)
     parser.add_argument('--pooling', help='pooling method', type = str, default='mean')
+    parser.add_argument('--alpha-slack', type=float, help="slack alpha", default=0.1)
 
     parser.add_argument('--name', type=str, default='test_run', help='name of the run for saving to wandb')
 

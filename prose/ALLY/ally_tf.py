@@ -47,9 +47,10 @@ class ALLYSampling(Strategy):
 
         scaler = MinMaxScaler() # scale lambdas
         y_train = scaler.fit_transform(y_train.reshape(-1, 1))
+        y_test = scaler.transform(y_test.reshape(-1, 1)) 
 
         # Train Lambdanet
-        self.train_val_lambdanet(X_train, X_test, y_train, y_test, scaler)
+        self.train_val_lambdanet(X_train, X_test, y_train, y_test)
         print('Done with training lambdanet:', time.strftime("%H:%M:%S", time.localtime()))
 
         # Drop the seqs which have been seen by model but has low lambda from base set 
@@ -186,7 +187,7 @@ class ALLYSampling(Strategy):
             mseFinal += loss.item()
         return mseFinal/len(loader_val) # batch val mse
 
-    def train_val_lambdanet(self, X_train, X_test, y_train, y_test, scaler):
+    def train_val_lambdanet(self, X_train, X_test, y_train, y_test):
         best_reg = None
         scheduler = optim.lr_scheduler.StepLR(self.optimizer_net, step_size = 1, gamma=0.95)
         loader_tr = DataLoader(lambdaset(X_train, X_test, y_train, y_test, train = True), 
@@ -295,7 +296,9 @@ class ALLYSampling(Strategy):
 
             idxs = np.array(train_indices)[idxs]  # original index
             lambdas = self.lambdas[idxs]
-            lambdas = torch.tensor(lambdas, requires_grad = False).cuda()
+            slacks = self.slacks[idxs]
+            lambdas = lambdas.detach().clone().to("cuda")
+            slacks = slacks.detach().clone().to("cuda").requires_grad_(True)
             self.flag[idxs] += 1
 
             optimizer.zero_grad() 
@@ -309,8 +312,9 @@ class ALLYSampling(Strategy):
             self.accFinal += delta/self.n
             self.token += t
 
-
-            lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*self.epsilon).nanmean()  
+            contraint_violations = (loss_seq_mean - (self.epsilon + slacks.cuda())).nanmean().item()
+            
+            lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*self.epsilon).nanmean() + 0.5*self.opts['alpha_slack']*torch.linalg.norm(slacks)**2
             lagrangian.backward()
 
             avg_grad = self.compute_avg_abs_gradient(self.clf)
@@ -322,11 +326,17 @@ class ALLYSampling(Strategy):
 
             loss_seq_mean = torch.nan_to_num(loss_seq_mean, nan=self.epsilon) # skip nan when updating dual variables
             lambdas += self.lr_dual*(loss_seq_mean-self.epsilon)
-            lambdas[lambdas < 0] = 0
+            lambdas.data.clamp_(min=0)
+            slacks.data.clamp_(min=0)
+
     
             self.lambdas[idxs] = lambdas.detach().cpu()
-            lambda_mean = np.mean(self.lambdas[self.flag >= 1]) # log the mean of ALL lambdas with non-zero flags
-            slack = loss_batch - self.epsilon
+            new_slacks = self.slacks.clone()
+            new_slacks[idxs] = slacks.detach().cpu()
+            self.slacks = new_slacks
+
+            lambda_mean = self.lambdas[self.flag >= 1].mean().item() # log the mean of ALL lambdas with non-zero flags
+            slack_mean = self.slacks[self.flag >= 1].mean().item()
 
 
             if i%self.opts['validate_every'] == 1 or self.opts['validate_every'] == 1:
@@ -338,13 +348,13 @@ class ALLYSampling(Strategy):
             
             # scheduler.step() 
             
-            wandb.log({'lambda_aver': lambda_mean, 'train loss': self.lossCurrent, 'train acc': self.accFinal, 'val perplexity': perplexity, 
-                        'avg abs grad': avg_grad, 'slack': slack, '# tokens': self.token, 'lagrangian':lagrangian,
+            wandb.log({'lambda_aver': lambda_mean, 'train loss': self.lossCurrent.item(), 'train acc': self.accFinal.item(), 'val perplexity': perplexity.item(), 
+                        'avg abs grad': avg_grad, 'slack_aver': slack_mean, '# tokens': self.token, 'constraint_violations':contraint_violations,
                         'model_lr': optimizer.param_groups[0]["lr"]}) 
 
         self.lr_dual = self.opts['lr_dual']
 
-        return self.lossCurrent, self.accFinal
+        return self.lossCurrent.item(), self.accFinal.item()
 
     def build_train_loader(self, train_indices): 
         base_training_set = Subset(self.all, train_indices)

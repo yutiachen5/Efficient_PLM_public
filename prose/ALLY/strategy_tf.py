@@ -36,10 +36,11 @@ class Strategy:
         self.held_indices = list(range(self.held_indices_all[0][0], self.held_indices_all[0][1]))  # current held-out set indices
 
         self.n_all = len(self.base) + len(self.held_cat)
-        self.lambdas = np.zeros(self.n_all)
+        self.lambdas = torch.zeros(self.n_all, requires_grad=False)
         self.flag = np.zeros(self.n_all)  # the number of times each seq has been selected for training
         self.idxs_base = np.zeros(self.n_all, dtype=bool)
         self.idxs_base[idxs_train] = True
+        self.slacks = torch.zeros(self.n_all, requires_grad=True)
 
         self.clf = self.model.apply(self.weight_reset).cuda() 
         self.reg = lambdanet(input_dim = self.clf.get_embedding_dim()).cuda() 
@@ -65,10 +66,10 @@ class Strategy:
             # FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
             FastaDataset(path+'/diff_ur25_ur20.fasta', max_length=max_length),
             FastaDataset(path+'/diff_ur30_ur25.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
+            # FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
         ]
         held_out_cat = ConcatDataset(held_out_sets)
         held_out_indices = []
@@ -110,7 +111,7 @@ class Strategy:
         assert len(set(chosen_indices)) == self.opts['nQuery']
 
         # initialize the value of lambda of added samples as predicted lambda
-        self.lambdas[chosen_indices] = chosen_preds
+        self.lambdas[chosen_indices] = torch.tensor(chosen_preds)
 
         # reinitialize flag 
         # if self.opts['base'] == 'drop':
