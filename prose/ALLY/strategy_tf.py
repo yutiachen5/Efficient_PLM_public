@@ -66,10 +66,10 @@ class Strategy:
             # FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
             FastaDataset(path+'/diff_ur25_ur20.fasta', max_length=max_length),
             FastaDataset(path+'/diff_ur30_ur25.fasta', max_length=max_length),
-            # FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
-            # FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
-            # FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length),
-            # FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
+            FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
+            FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
+            FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length),
+            FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
         ]
         held_out_cat = ConcatDataset(held_out_sets)
         held_out_indices = []
@@ -124,7 +124,7 @@ class Strategy:
             self.held_indices = held_indices_next + remaining_idx
         elif self.opts['held_out'] == 'discard': 
             self.held_indices = list(range(self.held_indices_all[rd+1][0], self.held_indices_all[rd+1][1]))
-        # self.reg = self.reg.apply(self.weight_reset).cuda() # reinitialize lambdanet after each round
+        self.reg = self.reg.apply(self.weight_reset).cuda() # reinitialize lambdanet after each round
             
     def validate(self): 
         self.clf.eval()     
