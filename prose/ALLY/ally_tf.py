@@ -157,7 +157,7 @@ class ALLYSampling(Strategy):
             y_test = []
         return X_train, X_test, y_train, y_test
 
-    def _train_lambdanet(self, epoch, loader_tr, optimizer, scheduler):
+    def _train_lambdanet(self, epoch, loader_tr, optimizer):
         self.reg.train()
         mseFinal = 0.
         iterator = iter(loader_tr)
@@ -200,7 +200,7 @@ class ALLYSampling(Strategy):
         mseBest = 1000.
         print_every = 1
         for epoch in range(100):
-            mseCurrent = self._train_lambdanet(epoch, loader_tr, self.optimizer_net, scheduler) 
+            mseCurrent = self._train_lambdanet(epoch, loader_tr, self.optimizer_net) 
             scheduler.step()
 
             if self.opts['lambdaValSize'] > 0:
@@ -312,7 +312,7 @@ class ALLYSampling(Strategy):
             self.accFinal += delta/self.n
             self.token += t
 
-            contraint_violations = (loss_seq_mean - (self.epsilon + slacks.cuda())).nanmean().item()
+            constraint_violations = (loss_seq_mean - (self.epsilon + slacks.cuda())).nanmean().item()
             
             lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*self.epsilon).nanmean() + 0.5*self.opts['alpha_slack']*torch.linalg.norm(slacks)**2
             lagrangian.backward()
@@ -346,10 +346,10 @@ class ALLYSampling(Strategy):
             if i%self.opts['dual_lr_stepsize'] == 0:
                 self.lr_dual = self.opts['dual_lr_gamma']*self.lr_dual
             
-            # scheduler.step() 
+            scheduler.step() 
             
             wandb.log({'lambda_aver': lambda_mean, 'train loss': self.lossCurrent.item(), 'train acc': self.accFinal.item(), 'val perplexity': perplexity.item(), 
-                        'avg abs grad': avg_grad, 'slack_aver': slack_mean, '# tokens': self.token, 'constraint_violations':contraint_violations,
+                        'avg abs grad': avg_grad, 'slack_aver': slack_mean, '# tokens': self.token, 'constraint_violations':constraint_violations,
                         'model_lr': optimizer.param_groups[0]["lr"]}) 
 
         self.lr_dual = self.opts['lr_dual']
