@@ -40,7 +40,7 @@ class Strategy:
         self.flag = np.zeros(self.n_all)  # the number of times each seq has been selected for training
         self.idxs_base = np.zeros(self.n_all, dtype=bool)
         self.idxs_base[idxs_train] = True
-        self.slacks = torch.zeros(self.n_all, requires_grad=True)
+        self.slacks = torch.zeros(self.n_all, requires_grad=False) 
 
         self.clf = self.model.apply(self.weight_reset).cuda() 
         self.reg = lambdanet(input_dim = self.clf.get_embedding_dim()).cuda() 

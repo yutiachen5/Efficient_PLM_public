@@ -4,7 +4,6 @@
 # and
 # ALLY (Navid NaderiAlizadeh and Rohit Singh. Aggregating residue-level protein language model embeddings with optimal transport. bioRxiv, 2024)
 # by Eleanor Chen (yc583@duke.edu)
-# Please check our repo: https://github.com/yutiachen5/Efficient_PLM_public for other scripts!
 #========================================================================
 
 from __future__ import print_function,division
@@ -93,6 +92,8 @@ def main():
     parser.add_argument('--nClusters', help='the number of clusters', type = int, default=4000)
     parser.add_argument('--pooling', help='pooling method', type = str, default='mean')
     parser.add_argument('--alpha-slack', type=float, help="slack alpha", default=0.1)
+    parser.add_argument('--lr-slack', help='slack learning rate', type=float, default=0.01)
+
 
     parser.add_argument('--name', type=str, default='test_run', help='name of the run for saving to wandb')
 

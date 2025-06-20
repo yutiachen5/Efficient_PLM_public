@@ -37,6 +37,8 @@ class ALLYSampling(Strategy):
 
         self.epsilon = self.opts['epsilon']
         self.lr_dual = self.opts['lr_dual']
+        self.lr_slack = self.opts['lr_slack']
+        self.alpha = self.opts['alpha_slack']
         self.alg = "ALLY"
         self.use_cuda = use_cuda
 
@@ -298,7 +300,7 @@ class ALLYSampling(Strategy):
             lambdas = self.lambdas[idxs]
             slacks = self.slacks[idxs]
             lambdas = lambdas.detach().clone().to("cuda")
-            slacks = slacks.detach().clone().to("cuda").requires_grad_(True)
+            slacks = slacks.detach().clone().to("cuda")#.requires_grad_(True) # remove? update slack manually
             self.flag[idxs] += 1
 
             optimizer.zero_grad() 
@@ -312,9 +314,10 @@ class ALLYSampling(Strategy):
             self.accFinal += delta/self.n
             self.token += t
 
-            constraint_violations = (loss_seq_mean - (self.epsilon + slacks.cuda())).nanmean().item()
+            constraint_violations = (loss_seq_mean - (self.epsilon+slacks.cuda())).nanmean().item() # usually 0 positive
             
-            lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*self.epsilon).nanmean() + 0.5*self.opts['alpha_slack']*torch.linalg.norm(slacks)**2
+            # e 2.75-> 2.5?
+            lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*(self.epsilon+slacks.cuda())).nanmean() + 0.5*self.alpha*torch.linalg.norm(slacks)**2
             lagrangian.backward()
 
             avg_grad = self.compute_avg_abs_gradient(self.clf)
@@ -324,16 +327,20 @@ class ALLYSampling(Strategy):
 
             optimizer.step()
 
-            loss_seq_mean = torch.nan_to_num(loss_seq_mean, nan=self.epsilon) # skip nan when updating dual variables
-            lambdas += self.lr_dual*(loss_seq_mean-self.epsilon)
+            nan_mask = torch.isnan(loss_seq_mean)
+            nan_idxs = torch.nonzero(nan_mask, as_tuple=True)
+            loss_seq_mean[nan_idxs] = self.epsilon + slacks[nan_idxs]
+
+            # loss_seq_mean = torch.nan_to_num(loss_seq_mean, nan=self.epsilon) # skip nan when updating dual variables, replace epsilon with epsilon+slacks
+
+            lambdas += self.lr_dual*(loss_seq_mean-(self.epsilon+slacks))
+            slacks -= self.lr_slack *(0.5*self.alpha*slacks-lambdas) 
             lambdas.data.clamp_(min=0)
             slacks.data.clamp_(min=0)
 
     
             self.lambdas[idxs] = lambdas.detach().cpu()
-            new_slacks = self.slacks.clone()
-            new_slacks[idxs] = slacks.detach().cpu()
-            self.slacks = new_slacks
+            self.slacks[idxs] = slacks.detach().cpu()
 
             lambda_mean = self.lambdas[self.flag >= 1].mean().item() # log the mean of ALL lambdas with non-zero flags
             slack_mean = self.slacks[self.flag >= 1].mean().item()
