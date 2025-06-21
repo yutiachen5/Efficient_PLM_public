@@ -316,7 +316,6 @@ class ALLYSampling(Strategy):
 
             constraint_violations = (loss_seq_mean - (self.epsilon+slacks.cuda())).nanmean().item() # usually 0 positive
             
-            # e 2.75-> 2.5?
             lagrangian = (loss_seq_mean*(1+lambdas)-lambdas*(self.epsilon+slacks.cuda())).nanmean() + 0.5*self.alpha*torch.linalg.norm(slacks)**2
             lagrangian.backward()
 
