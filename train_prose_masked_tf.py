@@ -1,10 +1,3 @@
-#========================================================================
-# Adapted from 
-# ProSE(Bepler T, Berger B. Learning the protein language: Evolution, structure, and function. Cell Syst. 2021)
-# and
-# ALLY (Navid NaderiAlizadeh and Rohit Singh. Aggregating residue-level protein language model embeddings with optimal transport. bioRxiv, 2024)
-# by Eleanor Chen (yc583@duke.edu)
-#========================================================================
 
 from __future__ import print_function,division
 

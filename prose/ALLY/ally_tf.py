@@ -1,8 +1,3 @@
-"""
- - training and evaluation of embedding model with optimization by sample informativeness
- - training, evaluation, and prediction of regression head to update samples by informativeness
-"""
-
 import numpy as np
 import pandas as pd
 import time
@@ -71,7 +66,7 @@ class ALLYSampling(Strategy):
         X_indices, X_embedding = self.get_embedding(held_emb_data)
 
         # save embeddings for regression head architecture exploring 
-        np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_held.npy', torch.stack(X_embedding).numpy())
+        # np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_held.npy', torch.stack(X_embedding).numpy())
 
         emb_dataset = UnmaskedDataset(X_embedding, X_indices)
         indices, preds = self.predict_lambdas(emb_dataset, scaler)
@@ -112,7 +107,7 @@ class ALLYSampling(Strategy):
                         chosen_indices += indices_no_space_left[:remaining_slots]
                         chosen_preds += preds_no_space_left[:remaining_slots]
                 df = pd.DataFrame({'sorted_preds':sorted_preds, 'sorted_idxs':sorted_indices})
-                df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_pred.csv', index = False)
+                # df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_pred.csv', index = False)
             else:
                 sorted_pairs = sorted(zip(preds, indices), reverse=True)
                 sorted_preds, sorted_indices = zip(*sorted_pairs)  
@@ -144,11 +139,11 @@ class ALLYSampling(Strategy):
 
         filtered_emb_data = UnmaskedDataset(filtered_data, trained_indices)  
         X_indices, X_embedding = self.get_embedding(filtered_emb_data)
-        np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.npy', torch.stack(X_embedding).numpy())
+        # np.save('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.npy', torch.stack(X_embedding).numpy())
 
         y_lambdas = self.lambdas[trained_indices]
         df = pd.DataFrame({'lambdas_trained':y_lambdas})
-        df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.csv', index = False)
+        # df.to_csv('/hpc/group/naderilab/eleanor/Efficient_PLM/prose/ALLY/saved_emb/'+self.opts['name']+'_rd_'+str(rd)+'_base.csv', index = False)
 
         if self.opts['lambdaValSize'] > 0: # default 0.2
             X_train, X_test, y_train, y_test = train_test_split(X_embedding, y_lambdas, test_size=self.opts['lambdaValSize'], random_state = self.opts['seed'])

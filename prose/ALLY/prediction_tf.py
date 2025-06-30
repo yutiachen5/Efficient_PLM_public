@@ -1,8 +1,3 @@
-"""
- - load pre-trained model
- - evaluate model performance on downtream tasks
-"""
-
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
