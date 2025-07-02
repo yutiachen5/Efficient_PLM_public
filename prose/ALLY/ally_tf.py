@@ -295,7 +295,7 @@ class ALLYSampling(Strategy):
             lambdas = self.lambdas[idxs]
             slacks = self.slacks[idxs]
             lambdas = lambdas.detach().clone().to("cuda")
-            slacks = slacks.detach().clone().to("cuda")#.requires_grad_(True) # remove? update slack manually
+            slacks = slacks.detach().clone().to("cuda")
             self.flag[idxs] += 1
 
             optimizer.zero_grad() 
@@ -323,9 +323,8 @@ class ALLYSampling(Strategy):
 
             nan_mask = torch.isnan(loss_seq_mean)
             nan_idxs = torch.nonzero(nan_mask, as_tuple=True)
-            loss_seq_mean[nan_idxs] = self.epsilon + slacks[nan_idxs]
+            loss_seq_mean[nan_idxs] = self.epsilon + slacks[nan_idxs] # skip nan when updating dual variables, replace epsilon with epsilon+slacks
 
-            # loss_seq_mean = torch.nan_to_num(loss_seq_mean, nan=self.epsilon) # skip nan when updating dual variables, replace epsilon with epsilon+slacks
 
             lambdas += self.lr_dual*(loss_seq_mean-(self.epsilon+slacks))
             slacks -= self.lr_slack *(0.5*self.alpha*slacks-lambdas) 
