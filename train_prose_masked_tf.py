@@ -110,11 +110,11 @@ def main():
     seed_everything(args.seed)
 
     # track pre-training progress by weights & bias
-    wandb.init(
-        project="array_jobs2",
-        name=args.name, 
-        config=vars(args) 
-    )
+    # wandb.init(
+    #     project="array_jobs2",
+    #     name=args.name, 
+    #     config=vars(args) 
+    # )
 
     # set the device
     d = args.device

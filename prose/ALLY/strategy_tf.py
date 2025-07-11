@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import TensorDataset, Subset, ConcatDataset
-from prose.datasets import FastaDataset, ClozeDataset, UnmaskedDataset
+from prose.datasets import FastaDataset, ValPPLDataset, UnmaskedDataset
 from prose.utils import pad_seq_val
 from prose.utils import LargeWeightedRandomSampler
 from torch.nn.utils.rnn import PackedSequence
@@ -63,13 +63,13 @@ class Strategy:
 
     def get_held_out_sets(self, path, max_length):
         held_out_sets = [
-            # FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
-            FastaDataset(path+'/diff_ur25_ur20.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur30_ur25.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length),
-            FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
+            FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
+            # FastaDataset(path+'/diff_ur25_ur20.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur30_ur25.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur35_ur30.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur40_ur35.fasta', max_length=max_length),
+            # FastaDataset(path+'/diff_ur45_ur40.fasta', max_length=max_length)
+            # FastaDataset(path+'/diff_ur50_ur45.fasta', max_length=max_length)
         ]
         held_out_cat = ConcatDataset(held_out_sets)
         held_out_indices = []
@@ -88,14 +88,28 @@ class Strategy:
 
     def build_val_loader(self, max_length):
         np.random.seed(self.opts['seed'])
-        val_fasta = FastaDataset('/hpc/group/naderilab/eleanor/prose_data/data/uniref50_0.1.fasta', max_length=max_length)
-        # val_fasta = FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
+        # val_fasta = FastaDataset('/hpc/group/naderilab/eleanor/prose_data/data/uniref50_0.1.fasta', max_length=max_length)
+        val_fasta = FastaDataset('/hpc/group/naderilab/eleanor/Efficient_PLM/data/demo_val.fa', max_length=max_length)
+
         idxs_val = np.random.choice(np.arange(len(val_fasta)), size=self.opts['val_size'], replace=False) 
         val_fasta_subset = Subset(val_fasta, idxs_val)
         del val_fasta
         gc.collect()
-        val_fasta_unmasked = UnmaskedDataset(val_fasta_subset, idxs_val) 
-        loader = DataLoader(val_fasta_unmasked, batch_size=self.opts['batch_size'], collate_fn=pad_seq_val)
+
+        L = np.array([len(x) for x in val_fasta_subset])
+        weight = np.maximum(L/self.opts['max_length'], 1)
+        sampler = LargeWeightedRandomSampler(weight, self.opts['num_steps']*self.opts['batch_size'])
+        counts = np.zeros(21)
+        for x in val_fasta_subset:
+            v,c = np.unique(x.numpy(), return_counts=True) # v: unique element, c: number of times each unique item appears
+            counts[v] = counts[v] + c 
+
+        val_data = ValPPLDataset(val_fasta_subset, len(counts))
+        loader = DataLoader(val_data, batch_size=self.opts['batch_size'], 
+                                            sampler=sampler,
+                                            collate_fn=pad_seq_val)
+        # val_fasta_unmasked = UnmaskedDataset(val_fasta_subset, idxs_val) 
+        # loader = DataLoader(val_fasta_unmasked, batch_size=self.opts['batch_size'], collate_fn=pad_seq_val)
         return loader
 
     def weight_reset(self, m):
@@ -130,10 +144,10 @@ class Strategy:
         self.clf.eval()     
         iterator = iter(self.val_loader)
 
-        perplexity = []
+        ppl = []
         with torch.no_grad():
             for i in range(len(self.val_loader)):
-                x, padding_mask, idxs = next(iterator) # padding_mask: [batch_size, max_len]
+                x, padding_mask, _ = next(iterator) # padding_mask: [batch_size, max_len]
                 logits, _ = self.clf(x.cuda(), padding_mask.cuda()) # logits: [batch_size, max_len, 21]
 
                 mask = padding_mask.nonzero(as_tuple=True)  # (batch_idx, seq_idx)
@@ -142,9 +156,39 @@ class Strategy:
                 x = x[mask]  # [valid_pos, 21]
                 x = torch.argmax(x, dim=1) # [valid_pos]
                 token_probs = probs.gather(1, x.long().unsqueeze(1)).squeeze(1)  # [valid_pos]
-                perplexity = torch.exp(-torch.log(token_probs).mean())  # Scalar value
+                batch_ppl = torch.exp(-torch.log(token_probs).mean())  # Scalar value
+                ppl.append(batch_ppl)
                                 
-        return torch.mean(perplexity.clone().detach())
+        return torch.stack(ppl).mean()
+
+    def validate_esm(self): # follow the way ESM-2 calculates val ppl
+        self.clf.eval()
+        iterator = iter(self.val_loader)
+
+        ppl = []
+        with torch.no_grad():
+            x, padding_indicator, masking_indicator = next(iterator)
+            logits, _ = self.clf(x.cuda(), padding_indicator.cuda())
+
+            padding_indicator = padding_indicator.nonzero(as_tuple=True)  # (batch_idx, seq_idx)
+            logits = logits[padding_indicator]  # [valid_pos, 21]
+            probs = torch.softmax(logits, dim=1).cpu()  # [valid_pos, 21]
+            x = x[padding_indicator]  # [valid_pos, 21]
+            x = torch.argmax(x, dim=1) # [valid_pos]
+
+            batch_idx, seq_idx = padding_indicator
+            masked_values = torch.stack([
+                masking_indicator[b][s] for b, s in zip(batch_idx.tolist(), seq_idx.tolist())
+            ])
+            valid = masked_values != -1
+            x = x[valid]
+            probs = probs[valid]
+
+            token_probs = probs.gather(1, x.long().unsqueeze(1)).squeeze(1)  # [valid_pos]
+            batch_ppl = torch.exp(-torch.log(token_probs).mean())  # Scalar value
+            ppl.append(batch_ppl)
+
+        return torch.stack(ppl).mean()
 
     def get_embedding(self, dataset):
         self.clf.eval()

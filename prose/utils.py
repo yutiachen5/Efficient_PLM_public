@@ -178,13 +178,13 @@ def pad_seq_scl(args):
     return one_hot_x, torch.stack(y), padding_mask, list(i), sum(tokens)
 
 def pad_seq_val(args):
-    x, i = zip(*args)
+    x, indicator = zip(*args)
     tokens = [len(seq) for seq in x]
     padded_x = pad_sequence(x, batch_first=True, padding_value=0)
     padding_mask = torch.tensor([[1]*l + [0]*(padded_x.shape[1] - l) for l in tokens], dtype=torch.bool) 
     one_hot_x = F.one_hot(padded_x.to(torch.int64), num_classes=21).float()
 
-    return one_hot_x, padding_mask, list(i)
+    return one_hot_x, padding_mask, list(indicator)
 
 class AllPairsDataset(torch.utils.data.Dataset):
     def __init__(self, X, Y, augment=None):
