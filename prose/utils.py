@@ -169,6 +169,7 @@ def pad_seq_scl(args):
     x, y, i = zip(*args)
     x = list(x)
     y = list(y)
+
     tokens = [len(seq) for seq in x]
     padded_x = pad_sequence(x, batch_first=True, padding_value=0)
     padding_mask = torch.tensor([[1]*l + [0]*(padded_x.shape[1] - l) for l in tokens], dtype=torch.bool) # 1:unpadded, 0: padded
@@ -178,13 +179,33 @@ def pad_seq_scl(args):
     return one_hot_x, torch.stack(y), padding_mask, list(i), sum(tokens)
 
 def pad_seq_val(args):
-    x, indicator = zip(*args)
+    x, x_orig, indicator = zip(*args)
+    x = list(x)
+    x_orig = list(x_orig)
+    indicator = list(indicator)
+
+    tokens = [len(seq) for seq in x]
+    padded_x = pad_sequence(x, batch_first=True, padding_value=0)
+    padded_x_orig = pad_sequence(x_orig, batch_first=True, padding_value=0) # same shape, share the same padding mask
+    masking_indicator = pad_sequence(indicator, batch_first=True, padding_value=-1)
+
+    padding_mask = torch.tensor([[1]*l + [0]*(padded_x.shape[1] - l) for l in tokens], dtype=torch.bool) 
+    one_hot_x = F.one_hot(padded_x.to(torch.int64), num_classes=21).float()
+
+    return one_hot_x, padded_x_orig, padding_mask, masking_indicator
+
+def pad_seq_emb(args):
+    x, i = zip(*args)
+    x = list(x)
+    i = list(i)
+
     tokens = [len(seq) for seq in x]
     padded_x = pad_sequence(x, batch_first=True, padding_value=0)
     padding_mask = torch.tensor([[1]*l + [0]*(padded_x.shape[1] - l) for l in tokens], dtype=torch.bool) 
     one_hot_x = F.one_hot(padded_x.to(torch.int64), num_classes=21).float()
 
-    return one_hot_x, padding_mask, list(indicator)
+    return one_hot_x, padding_mask, i
+
 
 class AllPairsDataset(torch.utils.data.Dataset):
     def __init__(self, X, Y, augment=None):

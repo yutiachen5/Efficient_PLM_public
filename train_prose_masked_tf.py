@@ -1,4 +1,3 @@
-
 from __future__ import print_function,division
 
 import numpy as np
@@ -22,6 +21,7 @@ import random
 import os
 
 # taskID=int(os.environ['SLURM_ARRAY_TASK_ID'])
+# jobName = str(os.environ['SLURM_JOB_NAME'])
 
 def seed_everything(seed: int):    
     random.seed(seed)
@@ -105,16 +105,19 @@ def main():
     # all_configs = [(l, nc, s) for l in [5, 6] for nc in [2000,4000,6000,8000,10000] for s in [100, 200, 300]]
     # args.nlayer, args.nClusters, args.seed = all_configs[taskID] 
     # args.name = 'plr_'+str(args.plr)+'_nly_'+str(args.nlayer)+'_d_'+str(args.d_model)+'_s_'+str(args.seed)+'_ffd_'+str(args.dim_feedforward)
-    
+
+    # all_configs = [(slr, a) for slr in [0.1, 0.5, 0.8] for a in [0.5, 1, 2]]
+    # args.slr, args.alpha = all_configs[taskID]
+    # args.name = 'a_'+str(args.slr)+'_slr_'+str(args.alpha)+'_esm2'
 
     seed_everything(args.seed)
 
     # track pre-training progress by weights & bias
-    # wandb.init(
-    #     project="array_jobs2",
-    #     name=args.name, 
-    #     config=vars(args) 
-    # )
+    wandb.init(
+        project="array_jobs2",
+        name=args.name, 
+        config=vars(args) 
+    )
 
     # set the device
     d = args.device

@@ -251,42 +251,46 @@ class ClozeDataset:
 
         # create the random mask... i.e. which positions to infer 
         mask = torch.rand(len(x), device=x.device) # returns a tensor filled with random num of length of x
-        mask = (mask < p) # we mask with probability p
-        y = mask*x + ~mask*(n-1) # assign unmasked positions to (n-1) 
+        mask = (mask < p).long() # we mask with probability p
+        y = mask*x + (1-mask)*(n-1) # assign unmasked positions to (n-1) 
 
         # sample the masked positions from the noise distribution
         noise = torch.multinomial(self.noise, len(x), replacement=True) 
-        x = ~mask*x + mask*noise
+        x = (1-mask)*x + mask*noise
 
         return x, y, i
 
 class ValPPLDataset:
-    def __init__(self, x, n):
+    def __init__(self, x, noise):
         self.x = x
-        self.n = n
+        self.noise = noise
 
     def __len__(self):
         return len(self.x)
     
     def __getitem__(self, i):
-        x = self.x[i]
+        x = self.x[i].long()
+        x_orig = x.clone()
 
         # modified tokens - 15%
         # masked - 80%, random - 10%, unmasked - 10%
         mask = torch.rand(len(x), device=x.device)
-        indicator = torch.zeros(len(mask))
+        indicator = torch.full((len(mask),), -1, dtype=torch.long)
 
         indicator[mask>=0.15] = -1 # unmodified, keep original value
-        indicator[mask<0.8*0.15] = 1 # masked, keep original value
+        indicator[mask<0.8*0.15] = 1 # masked
         indicator[(0.8*0.15<=mask) & (mask<0.9*0.15)] = 2 # random, generate random token
-        indicator[(mask>=0.9*0.15) & (mask<0.15)] = 0 # unmasked, set to (n-1) 
+        indicator[(mask>=0.9*0.15) & (mask<0.15)] = 0 # unmasked
 
-        n_rdm = len([indicator==2])
-        rdm_tokens = torch.randint(0, self.n, size=(n_rdm,))
-        x[indicator==0] = self.n-1
+        n_mask = (indicator == 1).sum().item()
+        noise = torch.multinomial(self.noise, n_mask, replacement=True)
+        x[indicator==1] = noise # masked
+
+        n_rdm = (indicator == 2).sum().item()
+        rdm_tokens = torch.randint(0, len(self.noise), size=(n_rdm,), dtype=torch.long)
         x[indicator==2] = rdm_tokens 
 
-        return x, indicator
+        return x, x_orig, indicator
 
 
 

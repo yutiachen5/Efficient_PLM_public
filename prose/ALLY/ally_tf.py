@@ -325,9 +325,9 @@ class ALLYSampling(Strategy):
             nan_idxs = torch.nonzero(nan_mask, as_tuple=True)
             loss_seq_mean[nan_idxs] = self.epsilon + slacks[nan_idxs] # skip nan when updating dual variables, replace epsilon with epsilon+slacks
 
-            lambdas_old = lambdas # ?
+            lambdas_current = lambdas # ?
             lambdas += self.lr_dual*(loss_seq_mean-(self.epsilon+slacks))
-            slacks -= self.lr_slack *(0.5*self.alpha*slacks-lambdas_old) 
+            slacks -= self.lr_slack*(0.5*self.alpha*slacks-lambdas_current) 
             lambdas.data.clamp_(min=0)
             slacks.data.clamp_(min=0)
 
@@ -340,7 +340,7 @@ class ALLYSampling(Strategy):
 
 
             if i%self.opts['validate_every'] == 1 or self.opts['validate_every'] == 1:
-                perplexity = self.validate()
+                perplexity = self.validate_esm()
                 self.clf.train()
 
             if i%self.opts['dual_lr_stepsize'] == 0:
@@ -348,9 +348,9 @@ class ALLYSampling(Strategy):
             
             scheduler.step() 
             
-            # wandb.log({'lambda_aver': lambda_mean, 'train loss': self.lossCurrent.item(), 'train acc': self.accFinal.item(), 'val perplexity': perplexity.item(), 
-            #             'avg abs grad': avg_grad, 'slack_aver': slack_mean, '# tokens': self.token, 'constraint_violations':constraint_violations,
-            #             'model_lr': optimizer.param_groups[0]["lr"]}) 
+            wandb.log({'lambda_aver': lambda_mean, 'train loss': self.lossCurrent.item(), 'train acc': self.accFinal.item(), 'val perplexity': perplexity.item(), 
+                        'avg abs grad': avg_grad, 'slack_aver': slack_mean, '# tokens': self.token, 'constraint_violations':constraint_violations,
+                        'model_lr': optimizer.param_groups[0]["lr"]}) 
 
         self.lr_dual = self.opts['lr_dual']
 
