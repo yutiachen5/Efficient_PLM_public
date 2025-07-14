@@ -3,13 +3,12 @@ data/*
 saved_models/*
 saved_emb/*
 wandb/*
-slurms/*
+slurms/*/
 *.err
 *.out
 *.csv
 *.npy
 *.txt
-*.sh
 *.fa
 *.h5
 *.sav

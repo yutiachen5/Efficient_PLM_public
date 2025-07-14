@@ -169,24 +169,24 @@ class Strategy:
 
         ppl = []
         with torch.no_grad():
-            x_mod, x_orig, padding_indicator, masking_indicator = next(iterator) # both x_mod and x_orig are padded, x_orig: [batch_size, max_len]
-            logits, _ = self.clf(x_mod.cuda(), padding_indicator.cuda())
-            logits = logits.cpu()
+            for i in range(len(self.val_loader)):
+                x_mod, x_orig, padding_indicator, masking_indicator = next(iterator) # both x_mod and x_orig are padded, x_orig: [batch_size, max_len]
+                logits, _ = self.clf(x_mod.cuda(), padding_indicator.cuda())
+                logits = logits.cpu()
 
-            valid_pos = (masking_indicator != -1) & (padding_indicator == 1) # 1: unpadded, -1: unmodified 
-            # print(valid_pos.shape)
-            # print(x_orig)
-            # print(type(x_orig))
-            # print(x_orig.shape)
-            # raise Exception
-            x_valid = x_orig[valid_pos]
-            logits_valid = logits[valid_pos]
+                valid_pos = (masking_indicator != -1) & (padding_indicator == 1) # 1: unpadded, -1: unmodified 
+                if valid_pos.sum() == 0:
+                    continue
 
-            probs = torch.softmax(logits_valid, dim=1)
-            token_probs = probs.gather(1, x_valid.long().unsqueeze(1)).squeeze(1) 
-            batch_ppl = torch.exp(-torch.log(token_probs).mean())
+                x_valid = x_orig[valid_pos]
+                logits_valid = logits[valid_pos]
 
-            ppl.append(batch_ppl)
+                probs = torch.softmax(logits_valid, dim=1)
+                token_probs = probs.gather(1, x_valid.long().unsqueeze(1)).squeeze(1) 
+                token_probs = token_probs.clamp(min=1e-6) # avoid 0 in log()
+                batch_ppl = torch.exp(-torch.log(token_probs).mean())
+
+                ppl.append(batch_ppl)
 
         return torch.stack(ppl).mean()
 

@@ -279,16 +279,20 @@ class ValPPLDataset:
 
         indicator[mask>=0.15] = -1 # unmodified, keep original value
         indicator[mask<0.8*0.15] = 1 # masked
-        indicator[(0.8*0.15<=mask) & (mask<0.9*0.15)] = 2 # random, generate random token
+        indicator[(0.8*0.15<=mask) & (mask<0.9*0.15)] = 2 # random
         indicator[(mask>=0.9*0.15) & (mask<0.15)] = 0 # unmasked
 
+        # masked token
         n_mask = (indicator == 1).sum().item()
-        noise = torch.multinomial(self.noise, n_mask, replacement=True)
-        x[indicator==1] = noise # masked
+        if n_mask > 0:
+            noise = torch.multinomial(self.noise, n_mask, replacement=True)
+            x[indicator==1] = noise 
 
+        # random token
         n_rdm = (indicator == 2).sum().item()
-        rdm_tokens = torch.randint(0, len(self.noise), size=(n_rdm,), dtype=torch.long)
-        x[indicator==2] = rdm_tokens 
+        if n_rdm > 0:
+            rdm_tokens = torch.randint(0, len(self.noise), size=(n_rdm,), dtype=torch.long)
+            x[indicator==2] = rdm_tokens 
 
         return x, x_orig, indicator
 
