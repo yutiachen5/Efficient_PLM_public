@@ -1,13 +1,12 @@
 #!/bin/sh
 #
 #SBATCH --get-user-env
-#SBATCH -A biostat
-#SBATCH -p scavenger-gpu,gpu-common
+#SBATCH -A naderilab
+#SBATCH -p scavenger-gpu
 #SBATCH -J PLM
 #SBATCH -o /hpc/group/naderilab/eleanor/Efficient_PLM/slurms/rdm.out
 #SBATCH -e /hpc/group/naderilab/eleanor/Efficient_PLM/slurms/rdm.err
-#SBATCH --exclusive
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:6000_ada:1
 #SBATCH --mem=150GB
 #SBATCH --cpus-per-task=1
 #

@@ -14,7 +14,7 @@ from prose.utils import LargeWeightedRandomSampler
 from prose.datasets import FastaDataset, ClozeDataset
 from prose.ALLY.ally_tf import ALLYSampling
 from torch.utils.data import Dataset, DataLoader, Subset
-from prose.models.transformer import TransformerMLM
+from prose.models.transformer import TransformerMLM, TransformerMLM_RoPE
 import time
 import argparse
 import random
@@ -50,6 +50,7 @@ def main():
     parser.add_argument('--nhead', type=int, default=4, help='the number of heads in the multiheadattention models (default=4)')
     parser.add_argument('--nlayer', type=int, default=3, help='the number of sub-encoder-layers in the encoder (default=3)')
     parser.add_argument('--dropout', type=float, default=0.1, help='dropout probability (default: 0.1)')
+    parser.add_argument('--encoding', type=str, default='RoPE', help='positional encoding layer (default: rotary encoding)')
 
     # training parameters
     parser.add_argument('-n', '--num-steps', type=int, default=2000, help='number ot training steps (default: 2,000)')
@@ -143,8 +144,15 @@ def main():
     sampler = LargeWeightedRandomSampler(weight, args.batch_size * args.num_steps)
 
     # initialize embedding model
-    model = TransformerMLM(input_dim=21, emb_dim=args.d_model, num_heads=args.nhead, num_layers=args.nlayer, 
-                            dim_feedforward=args.dim_feedforward, dropout=args.dropout, out_dim=21, max_len=args.max_length)
+    if args.encoding == 'RoPE':
+        model = TransformerMLM_RoPE(input_dim=21, emb_dim=args.d_model, num_heads=args.nhead, num_layers=args.nlayer, 
+                                dim_feedforward=args.dim_feedforward, dropout=args.dropout, out_dim=21, max_len=args.max_length) # rotary encoding
+    else:
+        model = TransformerMLM(input_dim=21, emb_dim=args.d_model, num_heads=args.nhead, num_layers=args.nlayer, 
+                                dim_feedforward=args.dim_feedforward, dropout=args.dropout, out_dim=21, max_len=args.max_length) # absolute encoding
+
+
+
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('# params: ', total_params)

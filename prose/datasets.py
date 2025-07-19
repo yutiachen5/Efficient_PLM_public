@@ -262,39 +262,34 @@ class ClozeDataset:
 
 class ValPPLDataset:
     def __init__(self, x, noise):
-        self.x = x
-        self.noise = noise
+        self.data = []
+
+        for i in range(len(x)):
+            x_i = x[i].long()
+            x_orig = x_i.clone()
+            mask = torch.rand(len(x_i))
+            indicator = torch.full((len(mask),), -1, dtype=torch.long)
+
+            indicator[mask >= 0.15] = -1
+            indicator[mask < 0.8 * 0.15] = 1
+            indicator[(0.8 * 0.15 <= mask) & (mask < 0.9 * 0.15)] = 2
+            indicator[(mask >= 0.9 * 0.15) & (mask < 0.15)] = 0
+
+            x_mod = x_i.clone()
+            if (indicator == 1).sum() > 0:
+                noise_sample = torch.multinomial(noise, (indicator == 1).sum().item(), replacement=True)
+                x_mod[indicator == 1] = noise_sample
+            if (indicator == 2).sum() > 0:
+                rand_token = torch.randint(0, len(noise), size=((indicator == 2).sum().item(),), dtype=torch.long)
+                x_mod[indicator == 2] = rand_token
+
+            self.data.append((x_mod, x_orig, indicator))
 
     def __len__(self):
-        return len(self.x)
-    
+        return len(self.data)
+
     def __getitem__(self, i):
-        x = self.x[i].long()
-        x_orig = x.clone()
-
-        # modified tokens - 15%
-        # masked - 80%, random - 10%, unmasked - 10%
-        mask = torch.rand(len(x), device=x.device)
-        indicator = torch.full((len(mask),), -1, dtype=torch.long)
-
-        indicator[mask>=0.15] = -1 # unmodified, keep original value
-        indicator[mask<0.8*0.15] = 1 # masked
-        indicator[(0.8*0.15<=mask) & (mask<0.9*0.15)] = 2 # random
-        indicator[(mask>=0.9*0.15) & (mask<0.15)] = 0 # unmasked
-
-        # masked token
-        n_mask = (indicator == 1).sum().item()
-        if n_mask > 0:
-            noise = torch.multinomial(self.noise, n_mask, replacement=True)
-            x[indicator==1] = noise 
-
-        # random token
-        n_rdm = (indicator == 2).sum().item()
-        if n_rdm > 0:
-            rdm_tokens = torch.randint(0, len(self.noise), size=(n_rdm,), dtype=torch.long)
-            x[indicator==2] = rdm_tokens 
-
-        return x, x_orig, indicator
+        return self.data[i]
 
 
 

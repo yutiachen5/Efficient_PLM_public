@@ -301,6 +301,7 @@ class ALLYSampling(Strategy):
             optimizer.zero_grad() 
 
             loss_batch, loss_seq_mean, correct, b = self.cloze_grad(x, y, padding_mask) 
+            print(loss_batch)
 
             self.n += b 
             delta = b*(loss_batch - self.lossCurrent)
