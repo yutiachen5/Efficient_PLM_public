@@ -6,7 +6,7 @@
 This project explores efficient pretraining of protein language models (PLMs) by actively identifying and sampling the most informative sequences. Our goal is to improve performance while reducing computational cost.
 
 🚧 This repository is under active development!  
-📄 A preprint on this work will be published soon!! A draft can be found at: [paper] (https://drive.google.com/file/d/1tIs26sp6EDkKNGxVXnXBef_Ud3kC5cAe/view?usp=drive_link) 
+📄 A preprint on this work will be published soon!! A draft can be found at: https://drive.google.com/file/d/1tIs26sp6EDkKNGxVXnXBef_Ud3kC5cAe/view?usp=drive_link
 
 
 ---
